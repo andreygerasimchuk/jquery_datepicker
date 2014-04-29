@@ -8,7 +8,7 @@ module JqueryDatepicker
       ActionController::Base.helper(JqueryDatepicker::DatepickerHelper)
       ActionView::Helpers::FormHelper.send(:include, JqueryDatepicker::FormHelper)
       ActionView::Base.send(:include, JqueryDatepicker::DatepickerHelper)
-      ActionView::Helpers::FormBuilder.send(:include,JqueryDatepicker::FormBuilder)
+      ActionView::Helpers::FormBuilder.send(:include, JqueryDatepicker::FormBuilder)
     end
   end
 end

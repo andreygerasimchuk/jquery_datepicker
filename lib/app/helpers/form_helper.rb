@@ -2,17 +2,11 @@ require 'date'
 
 module JqueryDatepicker
   module FormHelper
-    include ActionView::Helpers::JavaScriptHelper
-
     # Mehtod that generates datepicker input field inside a form
     def datepicker(object_name, method, options = {}, timepicker = false)
-      input_tag =  JqueryDatepicker::InstanceTag.new(object_name, method, self, options.delete(:object))
-      dp_options, tf_options =  input_tag.split_options(options)
-      tf_options[:value] = input_tag.format_date(tf_options[:value], String.new(dp_options[:dateFormat])) if  tf_options[:value] && !tf_options[:value].empty? && dp_options.has_key?(:dateFormat)
-      html = input_tag.to_input_field_tag("text", tf_options)
-      method = timepicker ? "datetimepicker" : "datepicker"
-      html += javascript_tag("jQuery(document).ready(function(){jQuery('##{input_tag.get_name_and_id(tf_options.stringify_keys)["id"]}').#{method}(#{dp_options.to_json})});")
-      html.html_safe
+      options[:timepicker] = timepicker
+      input_tag = JqueryDatepicker::InstanceTag.new(object_name, method, self, options)
+      input_tag.render
     end
   end
 
@@ -28,12 +22,25 @@ module JqueryDatepicker::FormBuilder
   end
 end
 
-class JqueryDatepicker::InstanceTag < ActionView::Helpers::InstanceTag
+class JqueryDatepicker::InstanceTag < ActionView::Helpers::Tags::TextField
+  include ActionView::Helpers::JavaScriptHelper
 
-  FORMAT_REPLACEMENTES = { "yy" => "%Y", "mm" => "%m", "dd" => "%d", "d" => "%-d", "m" => "%-m", "y" => "%y", "M" => "%b"}
+  FORMAT_REPLACEMENTES = { "yy" => "%Y", "mm" => "%m", "dd" => "%d", "d" => "%-d", "m" => "%-m", "y" => "%y", "M" => "%b" }
 
   # Extending ActionView::Helpers::InstanceTag module to make Rails build the name and id
   # Just returns the options before generate the HTML in order to use the same id and name (see to_input_field_tag mehtod)
+
+  def initialize(object_name, method_name, template_object, options = {})
+    @method = options.delete(:timepicker) ? 'datetimepicker' : 'datepicker'
+    @javascript_options, @tag_options = split_options(options)
+    @tag_options[:value] = format_date(@tag_options[:value], String.new(@javascript_options[:dateFormat])) if @tag_options[:value] && !@tag_options[:value].empty? && @javascript_options.has_key?(:dateFormat)
+
+    super(object_name, method_name, template_object, @tag_options)
+  end
+
+  def field_type
+    'text'
+  end
 
   def get_name_and_id(options = {})
     add_default_name_and_id(options)
@@ -41,7 +48,7 @@ class JqueryDatepicker::InstanceTag < ActionView::Helpers::InstanceTag
   end
 
   def available_datepicker_options
-    [:disabled, :altField, :altFormat, :appendText, :autoSize, :buttonImage, :buttonImageOnly, :buttonText, :calculateWeek, :changeMonth, :changeYear, :closeText, :constrainInput, :currentText, :dateFormat, :dayNames, :dayNamesMin, :dayNamesShort, :defaultDate, :duration, :firstDay, :gotoCurrent, :hideIfNoPrevNext, :isRTL, :maxDate, :minDate, :monthNames, :monthNamesShort, :navigationAsDateFormat, :nextText, :numberOfMonths, :prevText, :selectOtherMonths, :shortYearCutoff, :showAnim, :showButtonPanel, :showCurrentAtPos, :showMonthAfterYear, :showOn, :showOptions, :showOtherMonths, :showWeek, :stepMonths, :weekHeader, :yearRange, :yearSuffix]
+    [:disabled, :altField, :altFormat, :appendText, :autoSize, :buttonImage, :buttonImageOnly, :buttonText, :calculateWeek, :changeMonth, :changeYear, :closeText, :constrainInput, :currentText, :dateFormat, :dayNames, :dayNamesMin, :dayNamesShort, :defaultDate, :duration, :firstDay, :gotoCurrent, :hideIfNoPrevNext, :isRTL, :maxDate, :minDate, :monthNames, :monthNamesShort, :navigationAsDateFormat, :nextText, :numberOfMonths, :prevText, :selectOtherMonths, :shortYearCutoff, :showAnim, :showButtonPanel, :showCurrentAtPos, :showMonthAfterYear, :showOn, :showOptions, :showOtherMonths, :showWeek, :stepMonths, :timepicker, :weekHeader, :yearRange, :yearSuffix]
   end
 
   def split_options(options)
@@ -59,7 +66,10 @@ class JqueryDatepicker::InstanceTag < ActionView::Helpers::InstanceTag
   # This gem is not going to support all the options, just the most used.
 
   def translate_format(format)
-    format.gsub!(/#{FORMAT_REPLACEMENTES.keys.join("|")}/) { |match| FORMAT_REPLACEMENTES[match] }
+    format.gsub!(/#{FORMAT_REPLACEMENTES.keys.join('|')}/) { |match| FORMAT_REPLACEMENTES[match] }
   end
 
+  def render
+    super + javascript_tag("jQuery(document).ready(function(){jQuery('##{get_name_and_id(@tag_options.stringify_keys)['id']}').#{@method}(#{@javascript_options.to_json})});")
+  end
 end
